@@ -1,18 +1,22 @@
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, useGLTF, Center, Environment } from "@react-three/drei";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, useGLTF, Center, Environment, AccumulativeShadows, RandomizedLight } from "@react-three/drei";
 import { useRef } from "react";
-export const App = ({ position = [-0.8, 0, 2.5], fov = 20 }) => (
+import { easing } from "maath";
+export const App = ({ position = [0, 0, 2.5], fov = 25 }) => (
   <Canvas
-    camera={[position, fov]}
+  shadows
+    camera={{position, fov}}
     eventSource={document.getElementById("root")}
     eventPrefix="client"
   >
     <ambientLight intensity={0.5} />
     <Environment preset="city" />
+    <CameraRig>
     <Center>
       <Shirt />
+      <Backdrop/>
     </Center>
-    <OrbitControls />
+    </CameraRig>
   </Canvas>
 );
 
@@ -25,10 +29,55 @@ function Shirt(props) {
         receiveShadow
         geometry={nodes.T_Shirt_male.geometry}
         material={materials.lambert1}
-        position={[0.42, 0, 0]}
+        position={[0.42, -0.3, 0]}scale={1.2}
         rotation={[Math.PI / 2, 0, 0]}
       />
     </group>
   );
+}
+
+function Backdrop(){
+  return (
+    <AccumulativeShadows
+    temporal
+    frames={60}
+    alphaTest={0.85}
+    scale={10}
+    rotation={[Math.PI / 2, 0,0]}
+    position={[0,0,-0.14]}
+    >
+      <RandomizedLight 
+      amount={4} 
+      radius={9}
+      intensity={0.55}
+      ambient={0.25}
+      position={[5,5,-10]}
+      />
+    <RandomizedLight 
+      amount={4} 
+      radius={5}
+      intensity={0.25}
+      ambient={0.55}
+      position={[-5,5,-9]}
+      />
+
+    </AccumulativeShadows>
+  )
+}
+
+function CameraRig({children}){
+  const group = useRef()
+
+  useFrame((state,delta) => {
+    easing.dampE(
+      group.current.rotation,
+      [state.pointer.y /10, -state.pointer.x/ 5, 0],
+      0.25,
+      delta
+    )
+  })
+  return (
+    <group ref={group}>{children}</group>
+  )
 }
 useGLTF.preload("/shirt_baked.glb");
